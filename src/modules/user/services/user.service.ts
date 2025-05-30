@@ -17,7 +17,7 @@ export class UserService extends MongooseService<UserSchema> {
 
   // get user by email
   async getUserByEmail(email: string): Promise<UserSchema | null> {
-    return (await this.findOneByQuery({ email })).toJSON();
+    return (await this.findOneByQuery({ email }))?.toJSON();
   }
 
   async getAllUsers(): Promise<UserSchema[]> {

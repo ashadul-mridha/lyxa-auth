@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { comparePassword } from '../../../common/helpers/hash.helpers';
+import { RabbitmqService } from '../../../config/rabbitmq/rabbitmq.service';
 import { UserService } from '../../user/services/user.service';
 import { LoginDto } from '../dtos/login.dto';
 import { RegisterDto } from '../dtos/register.dto';
@@ -13,6 +14,7 @@ export class AuthService {
   constructor(
     private readonly userService: UserService,
     private jwtService: JwtService,
+    private readonly rabbitmqService: RabbitmqService,
     @InjectModel('TokenBlacklistSchema')
     private tokenBlacklistModel: Model<TokenBlacklistSchema>,
   ) {}
@@ -36,6 +38,12 @@ export class AuthService {
       throw new BadRequestException('Failed to create user');
     }
     const { password, ...userWithoutPassword } = newUser.toObject();
+
+    // publish a user created event (if needed)
+    this.rabbitmqService.publish('auth_api', 'user.created', {
+      ...userWithoutPassword,
+    });
+
     return userWithoutPassword;
   }
 
@@ -87,6 +95,29 @@ export class AuthService {
       });
 
       return true;
+    } catch (error) {
+      throw new BadRequestException('Invalid token');
+    }
+  }
+
+  // validate token and return user
+  public async validateToken(token: string) {
+    try {
+      const isBlacklisted = await this.isTokenBlacklisted(token);
+      if (isBlacklisted) {
+        // console.log('Token is blacklisted');
+        throw new BadRequestException('Token has been invalidated');
+      }
+      const payload = await this.jwtService.verifyAsync(token, {
+        secret: process.env.JWT_SECRET,
+      });
+      if (!payload || !payload['_id']) {
+        throw new BadRequestException('Invalid token payload');
+      }
+      return {
+        _id: payload['_id'],
+        email: payload['email'],
+      };
     } catch (error) {
       throw new BadRequestException('Invalid token');
     }
