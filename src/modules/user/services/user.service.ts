@@ -43,4 +43,14 @@ export class UserService extends MongooseService<UserSchema> {
     }
     return newUser;
   }
+
+  // get user profile
+  async getUserProfile(email: string): Promise<UserSchema> {
+    const user = await this.getUserByEmail(email);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    delete user.password;
+    return user;
+  }
 }

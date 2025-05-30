@@ -1,6 +1,7 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RabbitmqModule } from '../../config/rabbitmq/rabbitmq.module';
+import { AuthModule } from '../auth/auth.module';
 import { UserController } from './controllers/user.controller';
 import { UserModel } from './schemas/user.schema';
 import { UserService } from './services/user.service';
@@ -14,6 +15,7 @@ import { UserService } from './services/user.service';
       },
     ]),
     RabbitmqModule,
+    forwardRef(() => AuthModule),
   ],
   controllers: [UserController],
   providers: [UserService],
