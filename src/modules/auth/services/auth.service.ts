@@ -1,15 +1,20 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { comparePassword } from '../../../common/helpers/hash.helpers';
 import { UserService } from '../../user/services/user.service';
 import { LoginDto } from '../dtos/login.dto';
 import { RegisterDto } from '../dtos/register.dto';
+import { TokenBlacklistSchema } from '../schemas/token-blacklist.schema';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly userService: UserService,
     private jwtService: JwtService,
+    @InjectModel('TokenBlacklistSchema')
+    private tokenBlacklistModel: Model<TokenBlacklistSchema>,
   ) {}
 
   // register user
@@ -64,6 +69,33 @@ export class AuthService {
       access_token: await this.generateToken(payload),
       user: userWithoutPassword,
     };
+  }
+
+  // logout user
+  async logout(token: string) {
+    try {
+      // Verify the token is valid
+      const tokenVerify = await this.jwtService.verifyAsync(token, {
+        secret: process.env.JWT_SECRET,
+      });
+
+      // Add token to blacklist
+      await this.tokenBlacklistModel.create({
+        token,
+        userId: tokenVerify['_id'],
+        expiresAt: new Date(),
+      });
+
+      return true;
+    } catch (error) {
+      throw new BadRequestException('Invalid token');
+    }
+  }
+
+  // check if token is blacklisted
+  async isTokenBlacklisted(token: string): Promise<boolean> {
+    const blacklistedToken = await this.tokenBlacklistModel.findOne({ token });
+    return !!blacklistedToken;
   }
 
   // generate jwt token
