@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { throwError } from '../../../common/errors/errors.function';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { LoginDto } from '../dtos/login.dto';
@@ -48,6 +48,22 @@ export class AuthController {
       return {
         status: 'success',
         message: 'User logged out successfully',
+      };
+    } catch (error) {
+      throwError(error.status, error.errors, error.message);
+    }
+  }
+
+  // validate token
+  @Get('validate-token')
+  @UseGuards(JwtAuthGuard)
+  async validateToken(@Req() req) {
+    try {
+      const user = await this.authService.validateToken(req.token);
+      return {
+        status: 'success',
+        message: 'Token is valid',
+        data: user,
       };
     } catch (error) {
       throwError(error.status, error.errors, error.message);
