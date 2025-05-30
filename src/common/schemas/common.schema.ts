@@ -9,7 +9,6 @@ export class CommonSchema extends TimeStamps {
   @prop({ default: null })
   created_by?: mongoose.Schema.Types.ObjectId;
 
-  @prop({ required: true })
   _id?: mongoose.Types.ObjectId;
 
   @prop({ default: null })
